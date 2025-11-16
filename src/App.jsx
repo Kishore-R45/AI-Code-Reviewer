@@ -67,25 +67,23 @@ const App = () => {
     });
     return ai.models;
   };
-  const extractText = (result) => {
+    const extractText = async (result) => {
     try {
-      // Most recent responses support this
       if (typeof result.text === "function") {
-        return result.text();
+        return await result.text();
       }
-
-      // Fallback if needed
-      return (
-        result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
-        "No response generated"
-      );
-    } catch {
+      if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return result.candidates[0].content.parts[0].text;
+      }
+      
+      return "No response generated";
+    } catch (err) {
+      console.error("Extract text error:", err);
       return "No response generated";
     }
   };
 
   async function reviewCode() {
-    console.log("API KEY:", import.meta.env.VITE_API_KEY);
 
     setResponse("");
     setLoading(true);
@@ -108,7 +106,7 @@ ${code}
         `,
       });
 
-      const resultText = extractText(result);
+      const resultText = await extractText(result);
       setResponse(resultText);
     } catch (err) {
       setResponse("Error while reviewing code: " + err.message);
@@ -139,9 +137,8 @@ ${code}
         `,
       });
 
-      const fixedText = extractText(result);
+      const fixedText = await extractText(result);
       setCode(fixedText);
-
       setResponse("✅ Code fixed successfully!");
     } catch (err) {
       setResponse("Error while fixing code: " + err.message);
