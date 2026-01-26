@@ -3,7 +3,7 @@ import "./App.css";
 import Navbar from "./Components/Navbar";
 import Editor from "@monaco-editor/react";
 import Select from "react-select";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import Markdown from "react-markdown";
 import SyncLoader from "react-spinners/SyncLoader";
 
@@ -61,52 +61,43 @@ const App = () => {
       cursor: "pointer",
     }),
   };
-  const getModel = () => {
-    const ai = new GoogleGenAI({
-      apiKey: import.meta.env.VITE_API_KEY,
-    });
-    return ai.models;
-  };
-    const extractText = async (result) => {
-    try {
-      if (typeof result.text === "function") {
-        return await result.text();
-      }
-      if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
-        return result.candidates[0].content.parts[0].text;
-      }
-      
-      return "No response generated";
-    } catch (err) {
-      console.error("Extract text error:", err);
-      return "No response generated";
-    }
-  };
+  const openai = new OpenAI({
+    apiKey: import.meta.env.OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true,
+  });
 
   async function reviewCode() {
+    if (!code) {
+      alert("Please enter code first");
+      return;
+    }
 
     setResponse("");
     setLoading(true);
 
     try {
-      const model = getModel();
-
-      const result = await model.generateContent({
-        model: "gemini-2.0-flash",
-        contents: `
-You are an expert-level software developer.
-Review this ${selectedOption.value} code and provide:
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert-level software developer.",
+          },
+          {
+            role: "user",
+            content: `Review this ${selectedOption.value} code and provide:
 - Rating
 - Improvements
 - Potential bugs
 - Fix suggestions
 
 Code:
-${code}
-        `,
+${code}`,
+          },
+        ],
       });
 
-      const resultText = await extractText(result);
+      const resultText = completion.choices[0]?.message?.content || "No response generated";
       setResponse(resultText);
     } catch (err) {
       setResponse("Error while reviewing code: " + err.message);
@@ -125,19 +116,23 @@ ${code}
     setLoading(true);
 
     try {
-      const model = getModel();
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert-level software developer. Fix the code and return ONLY the corrected code without any explanations or markdown formatting.",
+          },
+          {
+            role: "user",
+            content: `Fix the following ${selectedOption.value} code:
 
-      const result = await model.generateContent({
-        model: "gemini-2.0-flash",
-        contents: `
-Fix the following ${selectedOption.value} code.
-Return ONLY the corrected code:
-
-${code}
-        `,
+${code}`,
+          },
+        ],
       });
 
-      const fixedText = await extractText(result);
+      const fixedText = completion.choices[0]?.message?.content || code;
       setCode(fixedText);
       setResponse("✅ Code fixed successfully!");
     } catch (err) {
