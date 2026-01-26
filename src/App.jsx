@@ -9,9 +9,9 @@ import SyncLoader from "react-spinners/SyncLoader";
 
 const App = () => {
   const options = [
-    { value: "javascript", label: "JavaScript" },
-    { value: "c", label: "C" },
     { value: "python", label: "Python" },
+    { value: "c", label: "C" },
+    { value: "javascript", label: "JavaScript" },
     { value: "java", label: "Java" },
     { value: "csharp", label: "C#" },
     { value: "cpp", label: "C++" },
